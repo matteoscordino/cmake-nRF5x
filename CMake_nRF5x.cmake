@@ -280,17 +280,20 @@ macro(nRF5x_setup)
 
     if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Darwin")
         set(TERMINAL "open")
+        set(TERMINAL_OPTS "")
     elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
         set(TERMINAL "sh")
+        set(TERMINAL_OPTS "")
     else()
         set(TERMINAL "gnome-terminal")
+        set(TERMINAL_OPTS "--")
     endif()
 
     add_custom_target(START_JLINK ALL
-            COMMAND ${TERMINAL} "${DIR_OF_nRF5x_CMAKE}/runJLinkGDBServer-${NRF_TARGET}"
-            COMMAND ${TERMINAL} "${DIR_OF_nRF5x_CMAKE}/runJLinkExe-${NRF_TARGET}"
+            COMMAND ${TERMINAL} ${TERMINAL_OPTS} "${DIR_OF_nRF5x_CMAKE}/runJLinkGDBServer-${NRF_TARGET}"
+            COMMAND ${TERMINAL} ${TERMINAL_OPTS} "${DIR_OF_nRF5x_CMAKE}/runJLinkExe-${NRF_TARGET}"
             COMMAND sleep 2s
-            COMMAND ${TERMINAL} "${DIR_OF_nRF5x_CMAKE}/runJLinkRTTClient"
+            COMMAND ${TERMINAL} ${TERMINAL_OPTS} "${DIR_OF_nRF5x_CMAKE}/runJLinkRTTClient"
             COMMENT "started JLink commands"
             )
 
