@@ -36,6 +36,11 @@ macro(nRF5x_setup)
     if(NOT DEFINED ARM_GCC_TOOLCHAIN)
         message(FATAL_ERROR "The toolchain must be set up before calling this macro")
     endif()
+    if(NOT DEFINED SD_FAMILY)
+        message(FATAL_ERROR "The SoftDevice family must be setup before calling this macro. Set SD_FAMILY.")
+    endif()
+    string(TOUPPER ${SD_FAMILY} NRF_SOFTDEVICE)
+
     # fix on macOS: prevent cmake from adding implicit parameters to Xcode
     set(CMAKE_OSX_SYSROOT "/")
     set(CMAKE_OSX_DEPLOYMENT_TARGET "")
@@ -44,15 +49,21 @@ macro(nRF5x_setup)
     set(CMAKE_C_STANDARD 99)
     set(CMAKE_CXX_STANDARD 98)
 
-    # CPU specyfic settings
+    # CPU specific settings
     if (NRF_TARGET MATCHES "nrf51")
         # nRF51 (nRF51-DK => PCA10028)
+        if (NOT NRF_BOARD)
+            set(NRF_BOARD "PCA10028")
+        else()
+            string(TOUPPER ${NRF_BOARD} NRF_BOARD)
+        endif()
+
         if(NOT DEFINED NRF5_LINKER_SCRIPT)
             set(NRF5_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/gcc_nrf51.ld")
         endif()
         set(CPU_FLAGS "-mcpu=cortex-m0 -mfloat-abi=soft")
-        add_definitions(-DBOARD_PCA10028 -DNRF51 -DNRF51422)
-        add_definitions(-DSOFTDEVICE_PRESENT -DS130 -DNRF_SD_BLE_API_VERSION=2 -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD)
+        add_definitions(-DBOARD_${NRF_BOARD} -DNRF51 -DNRF51422)
+        add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DNRF_SD_BLE_API_VERSION=2 -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD)
         include_directories(
                 "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers"
                 "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers/nrf51"
@@ -64,13 +75,18 @@ macro(nRF5x_setup)
         set(SOFTDEVICE_PATH "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/hex/${SD_FAMILY}_nrf51_${SD_REVISION}_softdevice.hex")
     elseif (NRF_TARGET MATCHES "nrf52")
         # nRF52 (nRF52-DK => PCA10040)
+        if (NOT NRF_BOARD)
+            set(NRF_BOARD "PCA10040")
+        else()
+            string(TOUPPER ${NRF_BOARD} NRF_BOARD)
+        endif()
 
         if(NOT DEFINED NRF5_LINKER_SCRIPT)
             set(NRF5_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/gcc_nrf52.ld")
         endif()
         set(CPU_FLAGS "-mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16")
-        add_definitions(-DNRF52 -DNRF52832 -DNRF52832_XXAA -DNRF52_PAN_74 -DNRF52_PAN_64 -DNRF52_PAN_12 -DNRF52_PAN_58 -DNRF52_PAN_54 -DNRF52_PAN_31 -DNRF52_PAN_51 -DNRF52_PAN_36 -DNRF52_PAN_15 -DNRF52_PAN_20 -DNRF52_PAN_55 -DBOARD_PCA10040)
-        add_definitions(-DSOFTDEVICE_PRESENT -DS132 -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD -DNRF_SD_BLE_API_VERSION=6)
+        add_definitions(-DBOARD_${NRF_BOARD} -DNRF52 -DNRF52832 -DNRF52832_XXAA -DNRF52_PAN_74 -DNRF52_PAN_64 -DNRF52_PAN_12 -DNRF52_PAN_58 -DNRF52_PAN_54 -DNRF52_PAN_31 -DNRF52_PAN_51 -DNRF52_PAN_36 -DNRF52_PAN_15 -DNRF52_PAN_20 -DNRF52_PAN_55)
+        add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD -DNRF_SD_BLE_API_VERSION=6)
         include_directories(
                 "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers"
                 "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers/nrf52"
