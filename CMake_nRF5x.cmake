@@ -85,8 +85,9 @@ macro(nRF5x_setup)
             set(NRF5_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/gcc_nrf52.ld")
         endif()
         set(CPU_FLAGS "-mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16")
-        add_definitions(-DBOARD_${NRF_BOARD} -DNRF52 -DNRF52832 -DNRF52832_XXAA -DNRF52_PAN_74 -DNRF52_PAN_64 -DNRF52_PAN_12 -DNRF52_PAN_58 -DNRF52_PAN_54 -DNRF52_PAN_31 -DNRF52_PAN_51 -DNRF52_PAN_36 -DNRF52_PAN_15 -DNRF52_PAN_20 -DNRF52_PAN_55)
+        add_definitions(-DBOARD_${NRF_BOARD} -DNRF52 -DNRF52832 -DNRF52832_XXAA)
         add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD -DNRF_SD_BLE_API_VERSION=6)
+        add_definitions(-DNRF52_PAN_74 -DNRF52_PAN_64 -DNRF52_PAN_12 -DNRF52_PAN_58 -DNRF52_PAN_54 -DNRF52_PAN_31 -DNRF52_PAN_51 -DNRF52_PAN_36 -DNRF52_PAN_15 -DNRF52_PAN_20 -DNRF52_PAN_55)
         include_directories(
                 "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers"
                 "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers/nrf52"
@@ -102,10 +103,10 @@ macro(nRF5x_setup)
 
     # compiler/assambler/linker flags
     set(CMAKE_C_FLAGS "${COMMON_FLAGS}")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O1")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O1 -DDEBUG_NRF -DDEBUG_NRF_USER")
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
     set(CMAKE_CXX_FLAGS "${COMMON_FLAGS}")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1 -DDEBUG_NRF -DDEBUG_NRF_USER")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
     set(CMAKE_ASM_FLAGS "-MP -MD -std=c99 -x assembler-with-cpp")
     set(CMAKE_EXE_LINKER_FLAGS "-mthumb -mabi=aapcs -std=gnu++98 -std=c99 -L ${NRF5_SDK_PATH}/modules/nrfx/mdk -T${NRF5_LINKER_SCRIPT} ${CPU_FLAGS} -Wl,--gc-sections --specs=nano.specs -lc -lnosys -lm")
@@ -144,6 +145,7 @@ macro(nRF5x_setup)
     # toolchain specific
     include_directories(
             "${NRF5_SDK_PATH}/components/toolchain/cmsis/include"
+            "${NRF5_SDK_PATH}/components/toolchain/cmsis/dsp/Include"
     )
 
 
