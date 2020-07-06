@@ -626,3 +626,77 @@ macro(nRF5x_addCryptoBackend BE_PATH)
     endif ()
 
 endmacro(nRF5x_addCryptoBackend)
+
+macro(nRF5x_addSecureBootloaderCommon)
+    nRF5x_addRawFStorage()
+    nRF5x_addCryptoFrontend()
+    nRF5x_addCryptoBackend("micro_ecc")
+    nRF5x_addCryptoBackend("nrf_sw")
+    include_directories(
+            "${NRF5_SDK_PATH}/components/libraries/bootloader"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/"
+            "${NRF5_SDK_PATH}/external/nano-pb/"
+            "${NRF5_SDK_PATH}/components/libraries/crc32/"
+    )
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_app_start.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_app_start_final.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_dfu_timers.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_fw_activation.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_info.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_wdt.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_flash.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_handling_error.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_mbr.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_req_handler.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_settings.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_transport.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_utils.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_validation.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_ver_validation.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/dfu-cc.pb.c"
+            "${NRF5_SDK_PATH}/components/libraries/crc32/crc32.c"
+            )
+endmacro(nRF5x_addSecureBootloaderCommon)
+
+macro(nRF5x_addSecureBootloaderSerial SERIAL_TYPE)
+    nRF5x_addSecureBootloaderCommon()
+    include_directories(
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/serial_dfu/"
+    )
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/serial_dfu/nrf_dfu_serial.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/serial_dfu/nrf_dfu_serial_${SERIAL_TYPE}.c"
+            )
+    if (${SERIAL_TYPE} MATCHES "usb")
+        list(APPEND SDK_SOURCE_FILES
+                "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_trigger_usb.c"
+                )
+    endif ()
+
+endmacro(nRF5x_addSecureBootloaderSerial)
+
+macro(nRF5x_addSecureBootloaderBLE)
+    nRF5x_addSecureBootloaderCommon()
+    include_directories(
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/ble_dfu/"
+    )
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/ble_dfu/nrf_dfu_ble.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_settings_svci.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_svci.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_svci_handler.c"
+            )
+endmacro(nRF5x_addSecureBootloaderBLE)
+
+
+macro(nRF5x_addSecureBootloaderANT)
+    nRF5x_addSecureBootloaderCommon()
+    include_directories(
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/ant_dfu/"
+    )
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/ant_dfu/nrf_dfu_ant.c"
+            )
+endmacro(nRF5x_addSecureBootloaderANT)
