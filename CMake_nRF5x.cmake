@@ -10,9 +10,9 @@ if (NOT NRFJPROG)
 endif ()
 
 # convert toolchain path to bin path
-if(DEFINED ARM_NONE_EABI_TOOLCHAIN_PATH)
+if (DEFINED ARM_NONE_EABI_TOOLCHAIN_PATH)
     set(ARM_NONE_EABI_TOOLCHAIN_BIN_PATH ${ARM_NONE_EABI_TOOLCHAIN_PATH}/bin)
-endif()
+endif ()
 
 # check if the nRF target has been set
 if (NRF_TARGET MATCHES "nrf51")
@@ -33,12 +33,12 @@ macro(nRF5x_toolchainSetup)
 endmacro()
 
 macro(nRF5x_setup)
-    if(NOT DEFINED ARM_GCC_TOOLCHAIN)
+    if (NOT DEFINED ARM_GCC_TOOLCHAIN)
         message(FATAL_ERROR "The toolchain must be set up before calling this macro")
-    endif()
-    if(NOT DEFINED SD_FAMILY)
+    endif ()
+    if (NOT DEFINED SD_FAMILY)
         message(FATAL_ERROR "The SoftDevice family must be setup before calling this macro. Set SD_FAMILY.")
-    endif()
+    endif ()
     string(TOUPPER ${SD_FAMILY} NRF_SOFTDEVICE)
 
     # fix on macOS: prevent cmake from adding implicit parameters to Xcode
@@ -54,13 +54,13 @@ macro(nRF5x_setup)
         # nRF51 (nRF51-DK => PCA10028)
         if (NOT NRF_BOARD)
             set(NRF_BOARD "PCA10028")
-        else()
+        else ()
             string(TOUPPER ${NRF_BOARD} NRF_BOARD)
-        endif()
+        endif ()
 
-        if(NOT DEFINED NRF5_LINKER_SCRIPT)
+        if (NOT DEFINED NRF5_LINKER_SCRIPT)
             set(NRF5_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/gcc_nrf51.ld")
-        endif()
+        endif ()
         set(CPU_FLAGS "-mcpu=cortex-m0 -mfloat-abi=soft")
         add_definitions(-DBOARD_${NRF_BOARD} -DNRF51 -DNRF51422)
         add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DNRF_SD_BLE_API_VERSION=2 -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD)
@@ -77,13 +77,13 @@ macro(nRF5x_setup)
         # nRF52 (nRF52-DK => PCA10040)
         if (NOT NRF_BOARD)
             set(NRF_BOARD "PCA10040")
-        else()
+        else ()
             string(TOUPPER ${NRF_BOARD} NRF_BOARD)
-        endif()
+        endif ()
 
-        if(NOT DEFINED NRF5_LINKER_SCRIPT)
+        if (NOT DEFINED NRF5_LINKER_SCRIPT)
             set(NRF5_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/gcc_nrf52.ld")
-        endif()
+        endif ()
         set(CPU_FLAGS "-mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16")
         add_definitions(-DBOARD_${NRF_BOARD} -DNRF52 -DNRF52832 -DNRF52832_XXAA)
         add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD -DNRF_SD_BLE_API_VERSION=6)
@@ -296,16 +296,16 @@ macro(nRF5x_setup)
             COMMENT "erasing flashing"
             )
 
-    if(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Darwin")
+    if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Darwin")
         set(TERMINAL "open")
         set(TERMINAL_OPTS "")
-    elseif(${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
+    elseif (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Windows")
         set(TERMINAL "sh")
         set(TERMINAL_OPTS "")
-    else()
+    else ()
         set(TERMINAL "gnome-terminal")
         set(TERMINAL_OPTS "--")
-    endif()
+    endif ()
 
     add_custom_target(START_JLINK ALL
             COMMAND ${TERMINAL} ${TERMINAL_OPTS} "${DIR_OF_nRF5x_CMAKE}/runJLinkGDBServer-${NRF_TARGET}"
@@ -472,7 +472,7 @@ macro(nRF5x_addBLEPeerManager)
             "${NRF5_SDK_PATH}/components/ble/peer_manager/pm_buffer.c"
             "${NRF5_SDK_PATH}/components/ble/peer_manager/security_dispatcher.c"
             "${NRF5_SDK_PATH}/components/ble/peer_manager/security_manager.c"
-    )
+            )
 
 endmacro(nRF5x_addBLEPeerManager)
 
@@ -489,9 +489,26 @@ macro(nRF5x_addAppFDS)
             "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage.c"
             "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage_sd.c"
             "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage_nvmc.c"
-    )
+            )
 
 endmacro(nRF5x_addAppFDS)
+
+# add just the raw fstroage, without FDS (e.g. as used by the Secure Bootloader)
+macro(nRF5x_addRawFStorage)
+    include_directories(
+            "${NRF5_SDK_PATH}/components/libraries/fstorage"
+            "${NRF5_SDK_PATH}/modules/nrfx/hal/"
+            "${NRF5_SDK_PATH}/components/libraries/experimental_section_vars"
+    )
+
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage.c"
+            "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage_sd.c"
+            "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage_nvmc.c"
+            "${NRF5_SDK_PATH}/modules/nrfx/hal/nrf_nvmc.c"
+            )
+
+endmacro(nRF5x_addRawFStorage)
 
 # adds NFC library
 # macro(nRF5x_addNFC)
