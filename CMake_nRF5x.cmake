@@ -558,3 +558,61 @@ macro(nRF5x_addBLEService NAME)
             )
 
 endmacro(nRF5x_addBLEService)
+
+macro(nRF5x_addCryptoFrontend)
+    include_directories(
+            "${NRF5_SDK_PATH}/components/libraries/crypto"
+            "${NRF5_SDK_PATH}/components/libraries/stack_info"
+    )
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_aead.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_aes.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_aes_shared.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_ecc.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_ecdh.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_ecdsa.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_eddsa.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_error.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_hash.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_hkdf.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_hmac.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_init.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_rng.c"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/nrf_crypto_shared.c"
+            )
+
+endmacro(nRF5x_addCryptoFrontend)
+
+macro(nRF5x_addCryptoBackend BE_PATH)
+    include_directories(
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/cc310"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/cc310_bl"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/cifra"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/mbedtls"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/micro_ecc"
+            "${NRF5_SDK_PATH}/external/micro-ecc/micro-ecc"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/nrf_hw"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/nrf_sw"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/oberon"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend/optiga"
+            "${NRF5_SDK_PATH}/components/libraries/crypto/backend"
+            "${NRF5_SDK_PATH}/components/libraries/sha256"
+    )
+    file(GLOB BE_SRC_FILES CONFIGURE_DEPENDS "${NRF5_SDK_PATH}/components/libraries/crypto/backend/${BE_PATH}/*.c")
+    list(APPEND SDK_SOURCE_FILES
+            "${BE_SRC_FILES}"
+            "${NRF5_SDK_PATH}/components/libraries/sha256/sha256.c"
+            )
+    if (${BE_PATH} MATCHES "micro_ecc")
+        # this bring in the micro_ecc library, which must have been pre-compiled according to the instructions
+        # in the SDK documentation
+        if (NRF_TARGET MATCHES "nrf51")
+            link_libraries("${NRF5_SDK_PATH}/external/micro-ecc/nrf51_armgcc/armgcc/micro_ecc_lib_nrf51.a")
+        elseif (NRF_TARGET MATCHES "nrf52")
+            link_libraries("${NRF5_SDK_PATH}/external/micro-ecc/nrf52hf_armgcc/armgcc/micro_ecc_lib_nrf52.a")
+        else ()
+            message(FATAL_ERROR "unknown platform, check NRF_TARGET")
+        endif ()
+    endif ()
+
+endmacro(nRF5x_addCryptoBackend)
