@@ -215,9 +215,6 @@ macro(nRF5x_setup)
             "${NRF5_SDK_PATH}/components/libraries/experimental_section_vars/nrf_section_iter.c"
             "${NRF5_SDK_PATH}/components/libraries/hardfault/hardfault_implementation.c"
             "${NRF5_SDK_PATH}/components/libraries/util/nrf_assert.c"
-            "${NRF5_SDK_PATH}/components/libraries/util/app_error.c"
-            "${NRF5_SDK_PATH}/components/libraries/util/app_error_weak.c"
-            "${NRF5_SDK_PATH}/components/libraries/util/app_error_handler_gcc.c"
             "${NRF5_SDK_PATH}/components/libraries/util/app_util_platform.c"
             "${NRF5_SDK_PATH}/components/libraries/util/sdk_mapped_flags.c"
             "${NRF5_SDK_PATH}/components/libraries/log/src/nrf_log_backend_flash.c"
@@ -492,6 +489,19 @@ macro(nRF5x_addAppFDS)
             )
 
 endmacro(nRF5x_addAppFDS)
+
+macro(nRF5x_addAppError)
+
+    include_directories(
+            "${NRF5_SDK_PATH}/components/libraries/util"
+    )
+
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/libraries/util/app_error.c"
+            "${NRF5_SDK_PATH}/components/libraries/util/app_error_weak.c"
+            "${NRF5_SDK_PATH}/components/libraries/util/app_error_handler_gcc.c"
+            )
+endmacro(nRF5x_addAppError)
 
 # add just the raw fstroage, without FDS (e.g. as used by the Secure Bootloader)
 macro(nRF5x_addRawFStorage)
