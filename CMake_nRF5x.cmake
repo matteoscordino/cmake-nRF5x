@@ -32,14 +32,66 @@ macro(nRF5x_toolchainSetup)
     include(${DIR_OF_nRF5x_CMAKE}/arm-gcc-toolchain.cmake)
 endmacro()
 
-macro(nRF5x_setup)
+macro(nRF5x_selectLinkerScript)
+    if (NOT DEFINED NRF5_LINKER_SCRIPT)
+        if(${NRF_LINKER_CONFIG_TYPE} MATCHES "app_no_bl")
+            set(LINKER_APP_BL "app_")
+            set(LINKER_VARIANT "no_bl_")
+        elseif(${NRF_LINKER_CONFIG_TYPE} MATCHES "app_release_bl")
+            set(LINKER_APP_BL "app_")
+            set(LINKER_VARIANT "with_release_bl_")
+        elseif(${NRF_LINKER_CONFIG_TYPE} MATCHES "app_debug_bl")
+            set(LINKER_APP_BL "app_")
+            set(LINKER_VARIANT "with_debug_bl_")
+        elseif(${NRF_LINKER_CONFIG_TYPE} MATCHES "bl")
+            set(LINKER_APP_BL "secure_bootloader_")
+            string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_TOLOWER)
+            if(${CMAKE_BUILD_TYPE_TOLOWER} MATCHES "debug")
+                set(LINKER_VARIANT "debug_")
+            else()
+                set(LINKER_VARIANT "release_")
+            endif()
+        endif()
+        set(NRF5_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/gcc_${LINKER_APP_BL}${LINKER_VARIANT}${NRF_TARGET}.ld")
+    endif ()
+    message("Using linker script ${NRF5_LINKER_SCRIPT}")
+endmacro()
+
+macro(nRF5x_setup WITH_SD WITH_MBR)
     if (NOT DEFINED ARM_GCC_TOOLCHAIN)
         message(FATAL_ERROR "The toolchain must be set up before calling this macro")
     endif ()
-    if (NOT DEFINED SD_FAMILY)
-        message(FATAL_ERROR "The SoftDevice family must be setup before calling this macro. Set SD_FAMILY.")
-    endif ()
-    string(TOUPPER ${SD_FAMILY} NRF_SOFTDEVICE)
+
+    if(${WITH_SD})
+        if (NOT DEFINED SD_FAMILY)
+            message(FATAL_ERROR "The SoftDevice family must be setup before calling this macro. Set SD_FAMILY.")
+        endif ()
+        string(TOUPPER ${SD_FAMILY} NRF_SOFTDEVICE)
+        if (NRF_TARGET MATCHES "nrf51")
+            set(NRF_SD_BLE_API_VERSION "2")
+        elseif (NRF_TARGET MATCHES "nrf52")
+            set(NRF_SD_BLE_API_VERSION "6")
+        endif ()
+        add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DNRF_SD_BLE_API_VERSION=${NRF_SD_BLE_API_VERSION} -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD)
+        set(SOFTDEVICE_PATH "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/hex/${SD_FAMILY}_${NRF_TARGET}_${SD_REVISION}_softdevice.hex")
+        include_directories(
+                "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers"
+                "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers/${NRF_TARGET}"
+        )
+    else()
+        include_directories(
+                "${NRF5_SDK_PATH}/components/drivers_nrf/nrf_soc_nosd"
+        )
+        # set a SD path anyway, just for the conveninence of having the FLASH_SOFTDEVICE target
+        set(SOFTDEVICE_PATH "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/hex/${SD_FAMILY}_${NRF_TARGET}_${SD_REVISION}_softdevice.hex")
+    endif()
+
+    if(${WITH_MBR})
+        include_directories(
+                "${NRF5_SDK_PATH}/components/softdevice/mbr/headers"
+        )
+        add_definitions(-DMBR_PRESENT)
+    endif()
 
     # fix on macOS: prevent cmake from adding implicit parameters to Xcode
     set(CMAKE_OSX_SYSROOT "/")
@@ -48,6 +100,13 @@ macro(nRF5x_setup)
     # language standard/version settings
     set(CMAKE_C_STANDARD 99)
     set(CMAKE_CXX_STANDARD 98)
+
+    nRF5x_selectLinkerScript()
+
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/modules/nrfx/mdk/system_${NRF_TARGET}.c"
+            "${NRF5_SDK_PATH}/modules/nrfx/mdk/gcc_startup_${NRF_TARGET}.S"
+            )
 
     # CPU specific settings
     if (NRF_TARGET MATCHES "nrf51")
@@ -58,21 +117,8 @@ macro(nRF5x_setup)
             string(TOUPPER ${NRF_BOARD} NRF_BOARD)
         endif ()
 
-        if (NOT DEFINED NRF5_LINKER_SCRIPT)
-            set(NRF5_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/gcc_nrf51.ld")
-        endif ()
         set(CPU_FLAGS "-mcpu=cortex-m0 -mfloat-abi=soft")
         add_definitions(-DBOARD_${NRF_BOARD} -DNRF51 -DNRF51422)
-        add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DNRF_SD_BLE_API_VERSION=2 -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD)
-        include_directories(
-                "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers"
-                "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers/nrf51"
-        )
-        list(APPEND SDK_SOURCE_FILES
-                "${NRF5_SDK_PATH}/modules/nrfx/mdk/system_nrf51.c"
-                "${NRF5_SDK_PATH}/modules/nrfx/mdk/gcc_startup_nrf51.S"
-                )
-        set(SOFTDEVICE_PATH "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/hex/${SD_FAMILY}_nrf51_${SD_REVISION}_softdevice.hex")
     elseif (NRF_TARGET MATCHES "nrf52")
         # nRF52 (nRF52-DK => PCA10040)
         if (NOT NRF_BOARD)
@@ -81,22 +127,9 @@ macro(nRF5x_setup)
             string(TOUPPER ${NRF_BOARD} NRF_BOARD)
         endif ()
 
-        if (NOT DEFINED NRF5_LINKER_SCRIPT)
-            set(NRF5_LINKER_SCRIPT "${CMAKE_SOURCE_DIR}/gcc_nrf52.ld")
-        endif ()
         set(CPU_FLAGS "-mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16")
         add_definitions(-DBOARD_${NRF_BOARD} -DNRF52 -DNRF52832 -DNRF52832_XXAA)
-        add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD -DNRF_SD_BLE_API_VERSION=6)
         add_definitions(-DNRF52_PAN_74 -DNRF52_PAN_64 -DNRF52_PAN_12 -DNRF52_PAN_58 -DNRF52_PAN_54 -DNRF52_PAN_31 -DNRF52_PAN_51 -DNRF52_PAN_36 -DNRF52_PAN_15 -DNRF52_PAN_20 -DNRF52_PAN_55)
-        include_directories(
-                "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers"
-                "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/headers/nrf52"
-        )
-        list(APPEND SDK_SOURCE_FILES
-                "${NRF5_SDK_PATH}/modules/nrfx/mdk/system_nrf52.c"
-                "${NRF5_SDK_PATH}/modules/nrfx/mdk/gcc_startup_nrf52.S"
-                )
-        set(SOFTDEVICE_PATH "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/hex/${SD_FAMILY}_nrf52_${SD_REVISION}_softdevice.hex")
     endif ()
 
     set(COMMON_FLAGS "-MP -MD -mthumb -mabi=aapcs -Wall -g3 -ffunction-sections -fdata-sections -fno-strict-aliasing -fno-builtin --short-enums ${CPU_FLAGS}")
@@ -131,7 +164,6 @@ macro(nRF5x_setup)
             "${NRF5_SDK_PATH}/components/boards/boards.c"
             "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh.c"
             "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_soc.c"
-            "${NRF5_SDK_PATH}/integration/nrfx/legacy/nrf_drv_clock.c"
             "${NRF5_SDK_PATH}/integration/nrfx/legacy/nrf_drv_uart.c"
             "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_clock.c"
             "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_gpiote.c"
@@ -255,31 +287,6 @@ macro(nRF5x_setup)
             "${NRF5_SDK_PATH}/external/fprintf/nrf_fprintf_format.c"
             )
 
-
-    # Common Bluetooth Low Energy files
-    include_directories(
-            "${NRF5_SDK_PATH}/components/ble"
-            "${NRF5_SDK_PATH}/components/ble/common"
-            "${NRF5_SDK_PATH}/components/ble/ble_advertising"
-            "${NRF5_SDK_PATH}/components/ble/ble_dtm"
-            "${NRF5_SDK_PATH}/components/ble/ble_link_ctx_manager"
-            "${NRF5_SDK_PATH}/components/ble/ble_racp"
-            "${NRF5_SDK_PATH}/components/ble/nrf_ble_qwr"
-            "${NRF5_SDK_PATH}/components/ble/peer_manager"
-    )
-
-    list(APPEND SDK_SOURCE_FILES
-            "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_ble.c"
-            "${NRF5_SDK_PATH}/components/ble/common/ble_advdata.c"
-            "${NRF5_SDK_PATH}/components/ble/common/ble_conn_params.c"
-            "${NRF5_SDK_PATH}/components/ble/common/ble_conn_state.c"
-            "${NRF5_SDK_PATH}/components/ble/common/ble_srv_common.c"
-            "${NRF5_SDK_PATH}/components/ble/ble_advertising/ble_advertising.c"
-            "${NRF5_SDK_PATH}/components/ble/ble_link_ctx_manager/ble_link_ctx_manager.c"
-            "${NRF5_SDK_PATH}/components/ble/ble_services/ble_nus/ble_nus.c"
-            "${NRF5_SDK_PATH}/components/ble/nrf_ble_qwr/nrf_ble_qwr.c"
-            )
-
     # adds target for erasing and flashing the board with a softdevice
     add_custom_target(FLASH_SOFTDEVICE ALL
             COMMAND ${NRFJPROG} --program ${SOFTDEVICE_PATH} -f ${NRF_TARGET} --sectorerase
@@ -312,9 +319,35 @@ macro(nRF5x_setup)
             COMMENT "started JLink commands"
             )
 
-endmacro(nRF5x_setup)
+endmacro(nRF5x_setup WITH_SD WITH_MBR)
 
-# adds a target for comiling and flashing an executable
+macro(nrfx_add_BleCommon)
+    # Common Bluetooth Low Energy files
+    include_directories(
+            "${NRF5_SDK_PATH}/components/ble"
+            "${NRF5_SDK_PATH}/components/ble/common"
+            "${NRF5_SDK_PATH}/components/ble/ble_advertising"
+            "${NRF5_SDK_PATH}/components/ble/ble_dtm"
+            "${NRF5_SDK_PATH}/components/ble/ble_link_ctx_manager"
+            "${NRF5_SDK_PATH}/components/ble/ble_racp"
+            "${NRF5_SDK_PATH}/components/ble/nrf_ble_qwr"
+            "${NRF5_SDK_PATH}/components/ble/peer_manager"
+    )
+
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_ble.c"
+            "${NRF5_SDK_PATH}/components/ble/common/ble_advdata.c"
+            "${NRF5_SDK_PATH}/components/ble/common/ble_conn_params.c"
+            "${NRF5_SDK_PATH}/components/ble/common/ble_conn_state.c"
+            "${NRF5_SDK_PATH}/components/ble/common/ble_srv_common.c"
+            "${NRF5_SDK_PATH}/components/ble/ble_advertising/ble_advertising.c"
+            "${NRF5_SDK_PATH}/components/ble/ble_link_ctx_manager/ble_link_ctx_manager.c"
+            "${NRF5_SDK_PATH}/components/ble/ble_services/ble_nus/ble_nus.c"
+            "${NRF5_SDK_PATH}/components/ble/nrf_ble_qwr/nrf_ble_qwr.c"
+            )
+endmacro(nrfx_add_BleCommon)
+
+# adds a target for compiling and flashing an executable
 macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
     # executable
     add_executable(${EXECUTABLE_NAME} ${SDK_SOURCE_FILES} ${SOURCE_FILES})
@@ -503,8 +536,8 @@ macro(nRF5x_addAppError)
             )
 endmacro(nRF5x_addAppError)
 
-# add just the raw fstroage, without FDS (e.g. as used by the Secure Bootloader)
-macro(nRF5x_addRawFStorage)
+# add just the raw fstorage, without FDS (e.g. as used by the Secure Bootloader)
+macro(nRF5x_addRawFStorage WITH_SD)
     include_directories(
             "${NRF5_SDK_PATH}/components/libraries/fstorage"
             "${NRF5_SDK_PATH}/modules/nrfx/hal/"
@@ -513,10 +546,18 @@ macro(nRF5x_addRawFStorage)
 
     list(APPEND SDK_SOURCE_FILES
             "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage.c"
-            "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage_sd.c"
-            "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage_nvmc.c"
             "${NRF5_SDK_PATH}/modules/nrfx/hal/nrf_nvmc.c"
             )
+
+    if(${WITH_SD})
+        list(APPEND SDK_SOURCE_FILES
+                "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage_sd.c"
+                )
+    else()
+        list(APPEND SDK_SOURCE_FILES
+                "${NRF5_SDK_PATH}/components/libraries/fstorage/nrf_fstorage_nvmc.c"
+                )
+endif()
 
 endmacro(nRF5x_addRawFStorage)
 
@@ -627,8 +668,8 @@ macro(nRF5x_addCryptoBackend BE_PATH)
 
 endmacro(nRF5x_addCryptoBackend)
 
-macro(nRF5x_addSecureBootloaderCommon)
-    nRF5x_addRawFStorage()
+macro(nRF5x_addSecureBootloaderCommon WITH_SD)
+    nRF5x_addRawFStorage(${WITH_SD})
     nRF5x_addCryptoFrontend()
     nRF5x_addCryptoBackend("micro_ecc")
     nRF5x_addCryptoBackend("nrf_sw")
@@ -637,6 +678,7 @@ macro(nRF5x_addSecureBootloaderCommon)
             "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/"
             "${NRF5_SDK_PATH}/external/nano-pb/"
             "${NRF5_SDK_PATH}/components/libraries/crc32/"
+            "${NRF5_SDK_PATH}/external/nano-pb/"
     )
     list(APPEND SDK_SOURCE_FILES
             "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_app_start.c"
@@ -646,6 +688,7 @@ macro(nRF5x_addSecureBootloaderCommon)
             "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_fw_activation.c"
             "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_info.c"
             "${NRF5_SDK_PATH}/components/libraries/bootloader/nrf_bootloader_wdt.c"
+            "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu.c"
             "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_flash.c"
             "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_handling_error.c"
             "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_mbr.c"
@@ -657,11 +700,14 @@ macro(nRF5x_addSecureBootloaderCommon)
             "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/nrf_dfu_ver_validation.c"
             "${NRF5_SDK_PATH}/components/libraries/bootloader/dfu/dfu-cc.pb.c"
             "${NRF5_SDK_PATH}/components/libraries/crc32/crc32.c"
+            "${NRF5_SDK_PATH}/components/libraries/slip/slip.c"
+            "${NRF5_SDK_PATH}/external/nano-pb/pb_decode.c"
+            "${NRF5_SDK_PATH}/external/nano-pb/pb_common.c"
             )
-endmacro(nRF5x_addSecureBootloaderCommon)
+endmacro(nRF5x_addSecureBootloaderCommon WITH_SD)
 
 macro(nRF5x_addSecureBootloaderSerial SERIAL_TYPE)
-    nRF5x_addSecureBootloaderCommon()
+    nRF5x_addSecureBootloaderCommon(FALSE)
     include_directories(
             "${NRF5_SDK_PATH}/components/libraries/bootloader/serial_dfu/"
     )
@@ -678,7 +724,7 @@ macro(nRF5x_addSecureBootloaderSerial SERIAL_TYPE)
 endmacro(nRF5x_addSecureBootloaderSerial)
 
 macro(nRF5x_addSecureBootloaderBLE)
-    nRF5x_addSecureBootloaderCommon()
+    nRF5x_addSecureBootloaderCommon(TRUE)
     include_directories(
             "${NRF5_SDK_PATH}/components/libraries/bootloader/ble_dfu/"
     )
@@ -692,7 +738,7 @@ endmacro(nRF5x_addSecureBootloaderBLE)
 
 
 macro(nRF5x_addSecureBootloaderANT)
-    nRF5x_addSecureBootloaderCommon()
+    nRF5x_addSecureBootloaderCommon(TRUE)
     include_directories(
             "${NRF5_SDK_PATH}/components/libraries/bootloader/ant_dfu/"
     )
