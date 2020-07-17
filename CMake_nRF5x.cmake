@@ -349,10 +349,16 @@ endmacro(nrfx_add_BleCommon)
 
 # adds a target for compiling and flashing an executable
 macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
+    # get git rev pre-build step to generate the revision header
+    add_custom_target ( revision_gen
+            COMMAND ${CMAKE_SOURCE_DIR}/revision_gen.sh
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/
+            COMMENT "pre build steps for ${EXECUTABLE_NAME}")
     # executable
     add_executable(${EXECUTABLE_NAME} ${SDK_SOURCE_FILES} ${SOURCE_FILES})
     set_target_properties(${EXECUTABLE_NAME} PROPERTIES SUFFIX ".out")
     set_target_properties(${EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-Wl,-Map=${EXECUTABLE_NAME}.map")
+    add_dependencies(${EXECUTABLE_NAME} revision_gen)
 
     # additional POST BUILD setps to create the .bin and .hex files
     add_custom_command(TARGET ${EXECUTABLE_NAME}
@@ -378,14 +384,17 @@ macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
         nRF5x_setSD_FWID(SD_FWID)
     endif()
     message("SD FWID: ${SD_FWID}")
-    message("DFU zip command: ${NRFUTIL} pkg generate --hw-version 52 --application-version ${DFU_PKG_VERSION} --application ${EXECUTABLE_NAME}.hex --sd-req ${SD_FWID} --key-file ${DFU_SIGNING_KEY} ${DFU_PKG_DEST_PATH}")
 
+    # don't remove EXE_NAME, it's used in the template (for some reason referencing EXECUTABLE_NAME
+    # directly in there doesn't work
+    set(EXE_NAME ${EXECUTABLE_NAME})
+    configure_file("${CMAKE_SOURCE_DIR}/dfu_gen.template.sh" "dfu_gen.sh" @ONLY)
     # custom target to create a DFU package
     add_custom_target("CREATE_DFU_PKG_${EXECUTABLE_NAME}" ALL
             DEPENDS ${EXECUTABLE_NAME}
-            COMMAND ${NRFUTIL} pkg generate --hw-version 52 --application-version "${DFU_PKG_VERSION}" --application ${EXECUTABLE_NAME}.hex --sd-req ${SD_FWID} --key-file ${DFU_SIGNING_KEY} ${DFU_PKG_DEST_PATH}
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/dfu_gen.sh
 
-            COMMENT "\ncreating DFU package for ${EXECUTABLE_NAME}.hex\nDFU zip command: ${NRFUTIL} pkg generate --hw-version 52 --application-version ${DFU_PKG_VERSION} --application ${EXECUTABLE_NAME}.hex --sd-req ${SD_FWID} --key-file ${DFU_SIGNING_KEY} ${DFU_PKG_DEST_PATH}"
+            COMMENT "creating DFU package for ${EXECUTABLE_NAME}.hex "
             )
 endmacro()
 
