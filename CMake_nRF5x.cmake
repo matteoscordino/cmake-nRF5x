@@ -371,6 +371,22 @@ macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
             COMMENT "flashing ${EXECUTABLE_NAME}.hex"
             )
 
+    # soft device FWID (used to create the DFU package: make sure it's correct, otherwise the package will
+    # be generated correctly, but DFU will fail)
+    # a list is available in nrfutil pkg generate --help, under "--sd-req TEXT"
+    if (NOT SD_FWID)
+        nRF5x_setSD_FWID(SD_FWID)
+    endif()
+    message("SD FWID: ${SD_FWID}")
+    message("DFU zip command: ${NRFUTIL} pkg generate --hw-version 52 --application-version ${DFU_PKG_VERSION} --application ${EXECUTABLE_NAME}.hex --sd-req ${SD_FWID} --key-file ${DFU_SIGNING_KEY} ${DFU_PKG_DEST_PATH}")
+
+    # custom target to create a DFU package
+    add_custom_target("CREATE_DFU_PKG_${EXECUTABLE_NAME}" ALL
+            DEPENDS ${EXECUTABLE_NAME}
+            COMMAND ${NRFUTIL} pkg generate --hw-version 52 --application-version "${DFU_PKG_VERSION}" --application ${EXECUTABLE_NAME}.hex --sd-req ${SD_FWID} --key-file ${DFU_SIGNING_KEY} ${DFU_PKG_DEST_PATH}
+
+            COMMENT "\ncreating DFU package for ${EXECUTABLE_NAME}.hex\nDFU zip command: ${NRFUTIL} pkg generate --hw-version 52 --application-version ${DFU_PKG_VERSION} --application ${EXECUTABLE_NAME}.hex --sd-req ${SD_FWID} --key-file ${DFU_SIGNING_KEY} ${DFU_PKG_DEST_PATH}"
+            )
 endmacro()
 
 # adds app-level scheduler library
@@ -746,3 +762,89 @@ macro(nRF5x_addSecureBootloaderANT)
             "${NRF5_SDK_PATH}/components/libraries/bootloader/ant_dfu/nrf_dfu_ant.c"
             )
 endmacro(nRF5x_addSecureBootloaderANT)
+
+
+# get one of the well known SD FWIDs based on softdevice
+function(nRF5x_setSD_FWID SD_FWID)
+    set(SD_FWID_NAMES_ARRAY
+            "SD_FWID_s112_nrf52_6.0.0"
+            "SD_FWID_s112_nrf52_6.1.0"
+            "SD_FWID_s112_nrf52_6.1.1"
+            "SD_FWID_s112_nrf52_7.0.0"
+            "SD_FWID_s112_nrf52_7.0.1"
+            "SD_FWID_s113_nrf52_7.0.0"
+            "SD_FWID_s113_nrf52_7.0.1"
+            "SD_FWID_s130_nrf51_1.0.0"
+            "SD_FWID_s130_nrf51_2.0.0"
+            "SD_FWID_s132_nrf52_2.0.0"
+            "SD_FWID_s130_nrf51_2.0.1"
+            "SD_FWID_s132_nrf52_2.0.1"
+            "SD_FWID_s132_nrf52_3.0.0"
+            "SD_FWID_s132_nrf52_3.1.0"
+            "SD_FWID_s132_nrf52_4.0.0"
+            "SD_FWID_s132_nrf52_4.0.2"
+            "SD_FWID_s132_nrf52_4.0.3"
+            "SD_FWID_s132_nrf52_4.0.4"
+            "SD_FWID_s132_nrf52_4.0.5"
+            "SD_FWID_s132_nrf52_5.0.0"
+            "SD_FWID_s132_nrf52_5.1.0"
+            "SD_FWID_s132_nrf52_6.0.0"
+            "SD_FWID_s132_nrf52_6.1.0"
+            "SD_FWID_s132_nrf52_6.1.1"
+            "SD_FWID_s132_nrf52_7.0.0"
+            "SD_FWID_s132_nrf52_7.0.1"
+            "SD_FWID_s140_nrf52_6.0.0"
+            "SD_FWID_s140_nrf52_6.1.0"
+            "SD_FWID_s140_nrf52_6.1.1"
+            "SD_FWID_s140_nrf52_7.0.0"
+            "SD_FWID_s140_nrf52_7.0.1"
+            "SD_FWID_s212_nrf52_6.1.1"
+            "SD_FWID_s332_nrf52_6.1.1"
+            "SD_FWID_s340_nrf52_6.1.1")
+
+
+    set(SD_FWID_VALUES_ARRAY
+    "0xA7"
+    "0xB0"
+    "0xB8"
+    "0xC4"
+    "0xCD"
+    "0xC3"
+    "0xCC"
+    "0x67"
+    "0x80"
+    "0x81"
+    "0x87"
+    "0x88"
+    "0x8C"
+    "0x91"
+    "0x95"
+    "0x98"
+    "0x99"
+    "0x9E"
+    "0x9F"
+    "0x9D"
+    "0xA5"
+    "0xA8"
+    "0xAF"
+    "0xB7"
+    "0xC2"
+    "0xCB"
+    "0xA9"
+    "0xAE"
+    "0xB6"
+    "0xC1"
+    "0xCA"
+    "0xBC"
+    "0xBA"
+    "0xB9")
+
+    # set the value we actually care about
+    set(SD_FWID_NAME "SD_FWID_${SD_FAMILY}_${NRF_TARGET}_${SD_REVISION}")
+    list(FIND SD_FWID_NAMES_ARRAY "${SD_FWID_NAME}" FWID_IDX)
+    if(${FWID_IDX} LESS 0)
+        message(FATAL_ERROR "Unknown chip/sd combo for FWID")
+    endif()
+    list(GET SD_FWID_VALUES_ARRAY ${FWID_IDX} FOUND_SD_FWID)
+    set(SD_FWID ${FOUND_SD_FWID} PARENT_SCOPE)
+endfunction(nRF5x_setSD_FWID SD_FWID)
