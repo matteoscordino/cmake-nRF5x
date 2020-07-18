@@ -9,6 +9,14 @@ if (NOT NRFJPROG)
     message(FATAL_ERROR "The path to the nrfjprog utility (NRFJPROG) must be set.")
 endif ()
 
+if (NOT MERGEHEX)
+    message(FATAL_ERROR "The path to the mergehex utility (MERGEHEX) must be set.")
+endif ()
+
+if (NOT NRFUTIL)
+    message(FATAL_ERROR "The path to the nrfutil utility (NRFUTIL) must be set.")
+endif ()
+
 # convert toolchain path to bin path
 if (DEFINED ARM_NONE_EABI_TOOLCHAIN_PATH)
     set(ARM_NONE_EABI_TOOLCHAIN_BIN_PATH ${ARM_NONE_EABI_TOOLCHAIN_PATH}/bin)
@@ -69,8 +77,10 @@ macro(nRF5x_setup WITH_SD WITH_MBR)
         string(TOUPPER ${SD_FAMILY} NRF_SOFTDEVICE)
         if (NRF_TARGET MATCHES "nrf51")
             set(NRF_SD_BLE_API_VERSION "2")
+            set(SHORT_HW_VERSION "51")
         elseif (NRF_TARGET MATCHES "nrf52")
             set(NRF_SD_BLE_API_VERSION "6")
+            set(SHORT_HW_VERSION "52")
         endif ()
         add_definitions(-DSOFTDEVICE_PRESENT -D${NRF_SOFTDEVICE} -DNRF_SD_BLE_API_VERSION=${NRF_SD_BLE_API_VERSION} -DSWI_DISABLE0 -DBLE_STACK_SUPPORT_REQD)
         set(SOFTDEVICE_PATH "${NRF5_SDK_PATH}/components/softdevice/${SD_FAMILY}/hex/${SD_FAMILY}_${NRF_TARGET}_${SD_REVISION}_softdevice.hex")
@@ -351,7 +361,7 @@ endmacro(nrfx_add_BleCommon)
 macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
     # get git rev pre-build step to generate the revision header
     add_custom_target ( revision_gen
-            COMMAND ${CMAKE_SOURCE_DIR}/revision_gen.sh
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/revision_gen.sh
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/
             COMMENT "pre build steps for ${EXECUTABLE_NAME}")
     # executable
@@ -360,15 +370,21 @@ macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
     set_target_properties(${EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-Wl,-Map=${EXECUTABLE_NAME}.map")
     add_dependencies(${EXECUTABLE_NAME} revision_gen)
 
-    # additional POST BUILD setps to create the .bin and .hex files
+    # don't remove EXE_NAME, it's used in the template (for some reason referencing EXECUTABLE_NAME
+    # directly in there doesn't work
+    set(EXE_NAME ${EXECUTABLE_NAME})
+    configure_file("${DIR_OF_nRF5x_CMAKE}/blsettings_gen.template.sh" "blsettings_gen.sh" @ONLY)
+    configure_file("${DIR_OF_nRF5x_CMAKE}/revision_gen.template.sh" "revision_gen.sh" @ONLY)
+    # additional POST BUILD steps to create the .bin and .hex files
     add_custom_command(TARGET ${EXECUTABLE_NAME}
             POST_BUILD
             COMMAND ${CMAKE_SIZE_UTIL} ${EXECUTABLE_NAME}.out
             COMMAND ${CMAKE_OBJCOPY} -O binary ${EXECUTABLE_NAME}.out "${EXECUTABLE_NAME}.bin"
             COMMAND ${CMAKE_OBJCOPY} -O ihex ${EXECUTABLE_NAME}.out "${EXECUTABLE_NAME}.hex"
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/blsettings_gen.sh
             COMMENT "post build steps for ${EXECUTABLE_NAME}")
 
-    # custom target for flashing the board
+    # custom target for flashing the executable to the board
     add_custom_target("FLASH_${EXECUTABLE_NAME}" ALL
             DEPENDS ${EXECUTABLE_NAME}
             COMMAND ${NRFJPROG} --program ${EXECUTABLE_NAME}.hex -f ${NRF_TARGET} --sectorerase
@@ -376,7 +392,18 @@ macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
             COMMAND ${NRFJPROG} --reset -f ${NRF_TARGET}
             COMMENT "flashing ${EXECUTABLE_NAME}.hex"
             )
+    # custom target for flashing the executable+bootloader_settings_page to the board
+    add_custom_target("FLASH_${EXECUTABLE_NAME}+bl_settings" ALL
+            DEPENDS ${EXECUTABLE_NAME}
+            COMMAND ${NRFJPROG} --program ${EXECUTABLE_NAME}.hex -f ${NRF_TARGET} --sectorerase
+            COMMAND sleep 0.5s
+            COMMAND ${NRFJPROG} --reset -f ${NRF_TARGET}
+            COMMENT "flashing ${EXECUTABLE_NAME}_with_bl_settings.hex"
+            )
+endmacro()
 
+# adds a target for compiling and flashing an executable
+macro(nRF5x_addDFU_Package EXECUTABLE_NAME)
     # soft device FWID (used to create the DFU package: make sure it's correct, otherwise the package will
     # be generated correctly, but DFU will fail)
     # a list is available in nrfutil pkg generate --help, under "--sd-req TEXT"
@@ -388,7 +415,7 @@ macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
     # don't remove EXE_NAME, it's used in the template (for some reason referencing EXECUTABLE_NAME
     # directly in there doesn't work
     set(EXE_NAME ${EXECUTABLE_NAME})
-    configure_file("${CMAKE_SOURCE_DIR}/dfu_gen.template.sh" "dfu_gen.sh" @ONLY)
+    configure_file("${DIR_OF_nRF5x_CMAKE}/dfu_gen.template.sh" "dfu_gen.sh" @ONLY)
     # custom target to create a DFU package
     add_custom_target("CREATE_DFU_PKG_${EXECUTABLE_NAME}" ALL
             DEPENDS ${EXECUTABLE_NAME}
