@@ -395,7 +395,7 @@ macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
     # custom target for flashing the executable+bootloader_settings_page to the board
     add_custom_target("FLASH_${EXECUTABLE_NAME}+bl_settings" ALL
             DEPENDS ${EXECUTABLE_NAME}
-            COMMAND ${NRFJPROG} --program ${EXECUTABLE_NAME}.hex -f ${NRF_TARGET} --sectorerase
+            COMMAND ${NRFJPROG} --program ${EXECUTABLE_NAME}_with_bl_settings.hex -f ${NRF_TARGET} --sectorerase
             COMMAND sleep 0.5s
             COMMAND ${NRFJPROG} --reset -f ${NRF_TARGET}
             COMMENT "flashing ${EXECUTABLE_NAME}_with_bl_settings.hex"
