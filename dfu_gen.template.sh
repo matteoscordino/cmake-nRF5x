@@ -14,4 +14,4 @@ fi
 
 echo -e "\nget_git_rev: decimal app verion: ${APP_VERSION}"
 
-@NRFUTIL@ pkg generate --hw-version @SHORT_HW_VERSION@ --application-version "${APP_VERSION}" --application @EXE_NAME@.hex --sd-req @SD_FWID@ --key-file @DFU_SIGNING_KEY@ @DFU_PKG_DEST_PREFIX@"${APP_VERSION_WITH_DIRTY}".zip
+@NRFUTIL@ pkg generate --hw-version @SHORT_HW_VERSION@ --application-version "${APP_VERSION}" --application @EXE_NAME@.hex --sd-req @SD_FWID@  --app-boot-validation VALIDATE_ECDSA_P256_SHA256 --key-file @DFU_SIGNING_KEY@ @DFU_PKG_DEST_PREFIX@"${APP_VERSION_WITH_DIRTY}".zip

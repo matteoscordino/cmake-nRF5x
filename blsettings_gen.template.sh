@@ -10,5 +10,5 @@ APP_VERSION=$(get_tag_as_integer)
 
 echo -e "\nget_git_rev: decimal app verion: ${APP_VERSION}"
 
-@NRFUTIL@ settings generate --family $(echo @NRF_TARGET@ | tr [a-z] [A-Z]) --application @EXE_NAME@.hex --application-version "${APP_VERSION}" --bootloader-version 1 --bl-settings-version 2 settings.hex
+@NRFUTIL@ settings generate --family $(echo @NRF_TARGET@ | tr [a-z] [A-Z]) --application @EXE_NAME@.hex --application-version "${APP_VERSION}" --app-boot-validation VALIDATE_ECDSA_P256_SHA256 --key-file @DFU_SIGNING_KEY@  --bootloader-version 1 --bl-settings-version 2 settings.hex
 @MERGEHEX@ -m settings.hex @EXE_NAME@.hex -o @EXE_NAME@_with_bl_settings.hex
