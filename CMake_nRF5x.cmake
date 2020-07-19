@@ -357,8 +357,9 @@ macro(nrfx_add_BleCommon)
             )
 endmacro(nrfx_add_BleCommon)
 
-# adds a target for compiling and flashing an executable
-macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
+# adds a target for compiling and flashing an Application executable
+# do not use this for bootloaders
+macro(nRF5x_addAppExecutable EXECUTABLE_NAME SOURCE_FILES)
     # get git rev pre-build step to generate the revision header
     add_custom_target ( revision_gen
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/revision_gen.sh
@@ -384,7 +385,8 @@ macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
             COMMAND ${CMAKE_CURRENT_BINARY_DIR}/blsettings_gen.sh
             COMMENT "post build steps for ${EXECUTABLE_NAME}")
 
-    # custom target for flashing the executable to the board
+
+    # custom target for flashing an application executable to the board
     add_custom_target("FLASH_${EXECUTABLE_NAME}" ALL
             DEPENDS ${EXECUTABLE_NAME}
             COMMAND ${NRFJPROG} --program ${EXECUTABLE_NAME}.hex -f ${NRF_TARGET} --sectorerase
@@ -399,6 +401,40 @@ macro(nRF5x_addExecutable EXECUTABLE_NAME SOURCE_FILES)
             COMMAND sleep 0.5s
             COMMAND ${NRFJPROG} --reset -f ${NRF_TARGET}
             COMMENT "flashing ${EXECUTABLE_NAME}_with_bl_settings.hex"
+            )
+endmacro()
+
+macro(nRF5x_addBootloaderExecutable EXECUTABLE_NAME SOURCE_FILES)
+    # get git rev pre-build step to generate the revision header
+    add_custom_target ( revision_gen
+            COMMAND ${CMAKE_CURRENT_BINARY_DIR}/revision_gen.sh
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/
+            COMMENT "pre build steps for ${EXECUTABLE_NAME}")
+    # executable
+    add_executable(${EXECUTABLE_NAME} ${SDK_SOURCE_FILES} ${SOURCE_FILES})
+    set_target_properties(${EXECUTABLE_NAME} PROPERTIES SUFFIX ".out")
+    set_target_properties(${EXECUTABLE_NAME} PROPERTIES LINK_FLAGS "-Wl,-Map=${EXECUTABLE_NAME}.map")
+    add_dependencies(${EXECUTABLE_NAME} revision_gen)
+
+    # don't remove EXE_NAME, it's used in the template (for some reason referencing EXECUTABLE_NAME
+    # directly in there doesn't work
+    set(EXE_NAME ${EXECUTABLE_NAME})
+    configure_file("${DIR_OF_nRF5x_CMAKE}/revision_gen.template.sh" "revision_gen.sh" @ONLY)
+    # additional POST BUILD steps to create the .bin and .hex files
+    add_custom_command(TARGET ${EXECUTABLE_NAME}
+            POST_BUILD
+            COMMAND ${CMAKE_SIZE_UTIL} ${EXECUTABLE_NAME}.out
+            COMMAND ${CMAKE_OBJCOPY} -O binary ${EXECUTABLE_NAME}.out "${EXECUTABLE_NAME}.bin"
+            COMMAND ${CMAKE_OBJCOPY} -O ihex ${EXECUTABLE_NAME}.out "${EXECUTABLE_NAME}.hex"
+            COMMENT "post build steps for ${EXECUTABLE_NAME}")
+
+    # custom target for flashing a bootloader executable to the board
+    add_custom_target("FLASH_${EXECUTABLE_NAME}" ALL
+            DEPENDS ${EXECUTABLE_NAME}
+            COMMAND ${NRFJPROG} --program ${EXECUTABLE_NAME}.hex -f ${NRF_TARGET} --sectoranduicrerase
+            COMMAND sleep 0.5s
+            COMMAND ${NRFJPROG} --reset -f ${NRF_TARGET}
+            COMMENT "flashing ${EXECUTABLE_NAME}.hex"
             )
 endmacro()
 
