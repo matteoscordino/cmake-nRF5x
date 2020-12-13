@@ -310,6 +310,11 @@ macro(nRF5x_setup WITH_SD WITH_MBR)
             COMMENT "erasing flashing"
             )
 
+    add_custom_target(SDK_CONFIG ALL
+            COMMAND java -jar ${NRF5_SDK_PATH}/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar ${NRF_PROJECT_PATH}/sdk_config.h
+            COMMENT "Launching SDK Configuration Wizard"
+            )
+
     if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Darwin")
         set(TERMINAL "open")
         set(TERMINAL_OPTS "")
