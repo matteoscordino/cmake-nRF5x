@@ -173,8 +173,8 @@ macro(nRF5x_setup WITH_SD WITH_MBR)
     list(APPEND SDK_SOURCE_FILES
             "${NRF5_SDK_PATH}/components/boards/boards.c"
             "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh.c"
+            "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_ble.c"
             "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_soc.c"
-            "${NRF5_SDK_PATH}/integration/nrfx/legacy/nrf_drv_uart.c"
             "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_clock.c"
             "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_gpiote.c"
             "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_uart.c"
@@ -504,6 +504,7 @@ macro(nRF5x_addAppUART)
     )
 
     list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/integration/nrfx/legacy/nrf_drv_uart.c"
             "${NRF5_SDK_PATH}/components/libraries/uart/app_uart_fifo.c"
             )
 
