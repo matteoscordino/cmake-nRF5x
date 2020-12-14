@@ -474,9 +474,20 @@ macro(nRF5x_addAppScheduler)
 
     list(APPEND SDK_SOURCE_FILES
             "${NRF5_SDK_PATH}/components/libraries/scheduler/app_scheduler.c"
+            "${NRF5_SDK_PATH}/components/libraries/util/app_util_platform.c"
             )
 
 endmacro(nRF5x_addAppScheduler)
+
+macro(nRF5x_addWdt)
+    include_directories(
+            "${NRF5_SDK_PATH}/modules/nrfx/drivers/include/"
+    )
+
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_wdt.c"
+            )
+endmacro(nRF5x_addWdt)
 
 # adds app-level FIFO libraries
 macro(nRF5x_addAppFIFO)
@@ -552,6 +563,21 @@ macro(nRF5x_addBSP WITH_BLE_BTN WITH_ANT_BTN WITH_NFC)
 
 endmacro(nRF5x_addBSP)
 
+
+# adds Bluetooth Low Energy Common components
+macro(nRF5x_addBLECommon)
+    include_directories(
+            "${NRF5_SDK_PATH}/components/ble/common"
+    )
+
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/ble/common/ble_advdata.c"
+            "${NRF5_SDK_PATH}/components/ble/common/ble_conn_params.c"
+            "${NRF5_SDK_PATH}/components/ble/common/ble_conn_state.c"
+            "${NRF5_SDK_PATH}/components/ble/common/ble_srv_common.c"
+            )
+endmacro(nRF5x_addBLECommon)
+
 # adds Bluetooth Low Energy GATT support library
 macro(nRF5x_addBLEGATT)
     include_directories(
@@ -564,6 +590,19 @@ macro(nRF5x_addBLEGATT)
 
 endmacro(nRF5x_addBLEGATT)
 
+
+# adds Bluetooth Low Energy Queued Writed library
+macro(nRF5x_addBLEQwr)
+    include_directories(
+            "${NRF5_SDK_PATH}/components/ble/nrf_ble_qwr"
+    )
+
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/ble/nrf_ble_qwr/nrf_ble_qwr.c"
+            )
+
+endmacro(nRF5x_addBLEQwr)
+
 # adds Bluetooth Low Energy advertising support library
 macro(nRF5x_addBLEAdvertising)
     include_directories(
@@ -573,7 +612,6 @@ macro(nRF5x_addBLEAdvertising)
     list(APPEND SDK_SOURCE_FILES
             "${NRF5_SDK_PATH}/components/ble/ble_advertising/ble_advertising.c"
             )
-
 endmacro(nRF5x_addBLEAdvertising)
 
 # adds Bluetooth Low Energy advertising support library
@@ -598,6 +636,8 @@ macro(nRF5x_addBLEPeerManager)
             "${NRF5_SDK_PATH}/components/ble/peer_manager/security_manager.c"
             )
 
+    # Peer Manager depends on FDS
+    nRF5x_addAppFDS()
 endmacro(nRF5x_addBLEPeerManager)
 
 # adds app-level FDS (flash data storage) library
