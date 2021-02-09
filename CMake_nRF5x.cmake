@@ -492,6 +492,18 @@ macro(nRF5x_addAppTimer)
             )
 endmacro(nRF5x_addAppTimer)
 
+macro(nRF5x_addTWI)
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_twi.c"
+            )
+endmacro(nRF5x_addTWI)
+
+macro(nRF5x_addTWIM)
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/modules/nrfx/drivers/src/nrfx_twim.c"
+            )
+endmacro(nRF5x_addTWIM)
+
 # adds app-level UART libraries
 macro(nRF5x_addAppUART)
     include_directories(
