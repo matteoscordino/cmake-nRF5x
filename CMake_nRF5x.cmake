@@ -897,6 +897,7 @@ endmacro(nRF5x_addSecureBootloaderANT)
 # get one of the well known SD FWIDs based on softdevice
 function(nRF5x_setSD_FWID SD_FWID)
     set(SD_FWID_NAMES_ARRAY
+            "SD_FWID_s132_nrf52_7.2.0"
             "SD_FWID_s112_nrf52_6.0.0"
             "SD_FWID_s112_nrf52_6.1.0"
             "SD_FWID_s112_nrf52_6.1.1"
@@ -934,6 +935,7 @@ function(nRF5x_setSD_FWID SD_FWID)
 
 
     set(SD_FWID_VALUES_ARRAY
+    "0x0101"
     "0xA7"
     "0xB0"
     "0xB8"
