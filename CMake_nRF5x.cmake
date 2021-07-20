@@ -479,6 +479,28 @@ macro(nRF5x_addAppScheduler)
 
 endmacro(nRF5x_addAppScheduler)
 
+macro(nRF5x_addFreeRTOS)
+    include_directories(
+            "${NRF5_SDK_PATH}/external/freertos/source/include/"
+            "${NRF5_SDK_PATH}/external/freertos/portable/GCC/nrf52/"
+            "${NRF5_SDK_PATH}/external/freertos/portable/CMSIS/nrf52/"
+    )
+
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/external/freertos/source/croutine.c"
+            "${NRF5_SDK_PATH}/external/freertos/source/event_groups.c"
+            "${NRF5_SDK_PATH}/external/freertos/source/portable/MemMang/heap_1.c"
+            "${NRF5_SDK_PATH}/external/freertos/source/list.c"
+            "${NRF5_SDK_PATH}/external/freertos/portable/GCC/nrf52/port.c"
+            "${NRF5_SDK_PATH}/external/freertos/portable/CMSIS/nrf52/port_cmsis.c"
+            "${NRF5_SDK_PATH}/external/freertos/portable/CMSIS/nrf52/port_cmsis_systick.c"
+            "${NRF5_SDK_PATH}/external/freertos/source/queue.c"
+            "${NRF5_SDK_PATH}/external/freertos/source/stream_buffer.c"
+            "${NRF5_SDK_PATH}/external/freertos/source/tasks.c"
+            "${NRF5_SDK_PATH}/external/freertos/source/timers.c"
+            )
+endmacro(nRF5x_addFreeRTOS)
+
 macro(nRF5x_addWdt)
     include_directories(
             "${NRF5_SDK_PATH}/modules/nrfx/drivers/include/"
@@ -507,6 +529,13 @@ macro(nRF5x_addAppTimer)
             "${NRF5_SDK_PATH}/components/libraries/timer/app_timer.c"
             )
 endmacro(nRF5x_addAppTimer)
+
+# adds app-level Timer libraries for FreeRTOS projects
+macro(nRF5x_addAppTimerFreeRTOS)
+    list(APPEND SDK_SOURCE_FILES
+            "${NRF5_SDK_PATH}/components/libraries/timer/app_timer_freertos.c"
+            )
+endmacro(nRF5x_addAppTimerFreeRTOS)
 
 macro(nRF5x_addTWI)
     list(APPEND SDK_SOURCE_FILES
